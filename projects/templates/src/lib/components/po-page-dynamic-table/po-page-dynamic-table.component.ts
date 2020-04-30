@@ -413,12 +413,11 @@ export class PoPageDynamicTableComponent extends PoPageDynamicListBaseComponent 
 
   private executeNew(actionNew: PoPageDynamicTableActions['new'], allowAction = true, newUrl?: string) {
     if (allowAction && actionNew) {
-      if (typeof actionNew === 'string') {
-        const path = newUrl ?? actionNew;
-        this.navigateTo({ path });
-      } else {
-        actionNew();
-      }
+      if (newUrl) return this.navigateTo({ path: newUrl });
+
+      if (typeof actionNew === 'string') return this.navigateTo({ path: actionNew });
+
+      return actionNew();
     }
   }
 
