@@ -23,6 +23,8 @@ import { PoPageDynamicEditOptions } from './interfaces/po-page-dynamic-edit-opti
 import { PoPageCustomizationService } from '../../services/po-page-customization/po-page-customization.service';
 import { PoPageDynamicEditMetadata } from './interfaces/po-page-dynamic-edit-metadata.interface';
 import { PoPageDynamicOptionsSchema } from '../../services/po-page-customization/po-page-dynamic-options.interface';
+import { PoPageDynamicEditActionsService } from './po-page-dynamic-edit-actions.service';
+import { PoPageDynamicEditBeforeSave } from './interfaces/po-page-dynamic-edit-before-save.interface';
 
 type UrlOrPoCustomizationFunction = string | (() => PoPageDynamicEditOptions);
 
@@ -356,7 +358,8 @@ export class PoPageDynamicEditComponent implements OnInit, OnDestroy {
     private poNotification: PoNotificationService,
     private poDialogService: PoDialogService,
     private poPageDynamicService: PoPageDynamicService,
-    private poPageCustomizationService: PoPageCustomizationService
+    private poPageCustomizationService: PoPageCustomizationService,
+    private poPageDynamicEditActionsService: PoPageDynamicEditActionsService
   ) {}
 
   ngOnInit(): void {
@@ -537,25 +540,44 @@ export class PoPageDynamicEditComponent implements OnInit, OnDestroy {
     return path.replace(/:id/g, uniqueKey);
   }
 
-  private save(path) {
-    if (this.dynamicForm.form.invalid) {
-      this.poNotification.warning(this.literals.saveNotificationWarning);
-      return;
-    }
+  private save(path: PoPageDynamicEditActions['save']) {
+    const customSave = newPath => {
+      if (this.dynamicForm.form.invalid) {
+        this.poNotification.warning(this.literals.saveNotificationWarning);
+        return;
+      }
 
-    const paramId = this.activatedRoute.snapshot.params['id'];
+      const paramId = this.activatedRoute.snapshot.params['id'];
 
-    const saveOperation: Observable<any> = paramId
-      ? this.poPageDynamicService.updateResource(paramId, this.model)
-      : this.poPageDynamicService.createResource(this.model);
+      const saveOperation: Observable<any> = paramId
+        ? this.poPageDynamicService.updateResource(paramId, this.model)
+        : this.poPageDynamicService.createResource(this.model);
 
-    const msgSucess = paramId ? this.literals.saveNotificationSuccessUpdate : this.literals.saveNotificationSuccessSave;
+      const msgSucess = paramId
+        ? this.literals.saveNotificationSuccessUpdate
+        : this.literals.saveNotificationSuccessSave;
 
-    saveOperation.toPromise().then(() => {
-      this.poNotification.success(msgSucess);
+      saveOperation.toPromise().then(() => {
+        this.poNotification.success(msgSucess);
+        if (typeof path === 'string') {
+          this.navigateTo(newPath);
+        } else {
+          path();
+        }
+      });
+    };
 
-      this.navigateTo(path);
-    });
+    this.poPageDynamicEditActionsService
+      .beforeSave(this.actions.beforeSave)
+      .subscribe((returnBeforeSave: PoPageDynamicEditBeforeSave) => {
+        if (returnBeforeSave && returnBeforeSave.allowAction === false) {
+          return;
+        }
+
+        const newUrl = returnBeforeSave?.newUrl || path;
+        this.model = { ...this.model, ...returnBeforeSave?.resource };
+        customSave(newUrl);
+      });
   }
 
   private saveNew(path) {

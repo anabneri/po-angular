@@ -1,3 +1,5 @@
+import { PoPageDynamicEditBeforeSave } from './po-page-dynamic-edit-before-save.interface';
+
 /**
  * @usedBy PoPageDynamicEditComponent
  *
@@ -6,6 +8,8 @@
  * Interface para as ações do componente po-page-dynamic-edit.
  */
 export interface PoPageDynamicEditActions {
+  beforeSave?: string | (() => PoPageDynamicEditBeforeSave);
+
   /**
    * @description
    *
@@ -34,7 +38,7 @@ export interface PoPageDynamicEditActions {
    * };
    * ```
    */
-  save?: string;
+  save?: string | Function;
 
   /**
    * @description
